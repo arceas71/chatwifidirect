@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AETHERLINK // P2P TACTICAL COMMS</title>
+  <style>
+    :root {
+      --bg-void: #050811;
+      --bg-panel: rgba(12, 20, 38, 0.86);
+      --cyan: #00f0ff;
+      --cyan-dim: rgba(0, 240, 255, 0.16);
+      --violet: #8b5cf6;
+      --emerald: #10b981;
+      --danger: #f43f5e;
+      --amber: #f59e0b;
+      --text-main: #e2e8f0;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-void);
+      background-image:
+        radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.12), transparent 55%),
+        linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 28px 28px, 28px 28px;
+      color: var(--text-main);
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Cinematic Splash Screen */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #0a1329 0%, #03050a 100%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    #splash.hidden {
+      opacity: 0;
+      transform: scale(1.06);
+      pointer-events: none;
+    }
+    .core-ring {
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      border: 2px solid var(--cyan-dim);
+      border-top-color: var(--cyan);
+      border-bottom-color: var(--violet);
+      animation: spin 2.2s linear infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 35px rgba(0, 240, 255, 0.25);
+    }
+    .core-inner {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      border: 2px dashed var(--cyan);
+      animation: spinReverse 3.4s linear infinite;
+    }
+    .splash-title {
+      margin-top: 28px;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 5px;
+      color: #fff;
+      text-shadow: 0 0 16px var(--cyan);
+    }
+    .splash-sub {
+      margin-top: 8px;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--cyan);
+      opacity: 0.85;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spinReverse { to { transform: rotate(-360deg); } }
+
+    /* Top Telemetry Header */
+    header {
+      padding: 14px 16px;
+      background: rgba(8, 14, 28, 0.92);
+      border-bottom: 1px solid rgba(0, 240, 255, 0.24);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .brand {
+      display: flex;
+      flex-direction: column;
+    }
+    .brand-title {
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+    .brand-self {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: rgba(244, 63, 94, 0.14);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+    .status-badge.online {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: var(--emerald);
+      color: var(--emerald);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.3);
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Main View Switcher */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Radar Discovery Panel */
+    #discovery-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 14px;
+      overflow-y: auto;
+    }
+    .radar-card {
+      background: var(--bg-panel);
+      border: 1px solid rgba(0, 240, 255, 0.22);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .radar-info h2 {
+      font-size: 14px;
+      letter-spacing: 1.5px;
+      color: #fff;
+    }
+    .radar-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .btn-neon {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(139, 92, 246, 0.25));
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.2);
+      transition: transform 0.12s, background 0.2s;
+    }
+    .btn-neon:active {
+      transform: scale(0.96);
+    }
+
+    .peers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .peer-item {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-left: 3px solid var(--cyan);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .peer-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .peer-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .peer-mac {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-muted);
+    }
+
+    /* Chat View */
+    #chat-view {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chat-subheader {
+      padding: 10px 16px;
+      background: rgba(15, 23, 42, 0.9);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .role-tag {
+      color: var(--amber);
+      font-family: monospace;
+      font-weight: 700;
+    }
+    .btn-disconnect {
+      background: rgba(244, 63, 94, 0.16);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    #messages-container {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .msg-bubble {
+      max-width: 80%;
+      padding: 11px 14px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.45;
+      position: relative;
+      word-wrap: break-word;
+      user-select: text;
+    }
+    .msg-out {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.18), rgba(14, 116, 144, 0.35));
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      border-bottom-right-radius: 3px;
+      color: #f8fafc;
+    }
+    .msg-in {
+      align-self: flex-start;
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(139, 92, 246, 0.45);
+      border-bottom-left-radius: 3px;
+      color: #f1f5f9;
+    }
+    .msg-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      font-family: monospace;
+    }
+
+    .composer {
+      padding: 12px 14px;
+      background: rgba(8, 14, 28, 0.96);
+      border-top: 1px solid rgba(0, 240, 255, 0.2);
+      display: flex;
+      gap: 10px;
+    }
+    .composer input {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    .composer input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+    }
+
+    /* Telemetry Log Footer */
+    #telemetry-bar {
+      padding: 7px 14px;
+      background: #03060c;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--cyan);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Animated Sci-Fi Splash Screen -->
+  <div id="splash">
+    <div class="core-ring">
+      <div class="core-inner"></div>
+    </div>
+    <div class="splash-title">AETHERLINK</div>
+    <div class="splash-sub">OFFLINE WI-FI DIRECT TACTICAL MESH</div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <div class="brand-title">AETHERLINK // P2P</div>
+      <div class="brand-self" id="self-node-label">LOCAL NODE: INITIALIZING...</div>
+    </div>
+    <div class="status-badge" id="conn-badge">
+      <div class="pulse-dot"></div>
+      <span id="conn-text">STANDBY</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Radar Discovery Screen -->
+    <section id="discovery-view">
+      <div class="radar-card">
+        <div class="radar-info">
+          <h2>WI-FI DIRECT RADAR</h2>
+          <p>Zero-internet P2P hardware discovery</p>
+        </div>
+        <button class="btn-neon" id="scan-btn">SCAN NODES</button>
+      </div>
+
+      <div class="peers-list" id="peers-container">
+        <div class="peer-item" style="border-left-color: var(--violet);">
+          <div class="peer-meta">
+            <div class="peer-name">Tap "SCAN NODES" on both phones</div>
+            <div class="peer-mac">Requires Wi-Fi & Location toggled ON (No internet needed)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Chat Screen -->
+    <section id="chat-view">
+      <div class="chat-subheader">
+        <div>
+          LINKED PEER: <strong id="peer-title" style="color: var(--cyan);">NODE</strong>
+          <span class="role-tag" id="role-label">[ROLE]</span>
+        </div>
+        <button class="btn-disconnect" id="disconnect-btn">SEVER LINK</button>
+      </div>
+
+      <div id="messages-container"></div>
+
+      <div class="composer">
+        <input type="text" id="msg-input" placeholder="Transmit encrypted P2P message..." autocomplete="off" />
+        <button class="btn-neon" id="send-btn">SEND</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="telemetry-bar">SYS // Ready. Awaiting P2P hardware sweep...</div>
+
+  <script>
+    const splash = document.getElementById('splash');
+    const scanBtn = document.getElementById('scan-btn');
+    const peersContainer = document.getElementById('peers-container');
+    const discoveryView = document.getElementById('discovery-view');
+    const chatView = document.getElementById('chat-view');
+    const messagesContainer = document.getElementById('messages-container');
+    const msgInput = document.getElementById('msg-input');
+    const sendBtn = document.getElementById('send-btn');
+    const disconnectBtn = document.getElementById('disconnect-btn');
+    const telemetryBar = document.getElementById('telemetry-bar');
+    const connBadge = document.getElementById('conn-badge');
+    const connText = document.getElementById('conn-text');
+    const peerTitle = document.getElementById('peer-title');
+    const roleLabel = document.getElementById('role-label');
+    const selfNodeLabel = document.getElementById('self-node-label');
+
+    // Dismiss splash screen after cinematic boot
+    setTimeout(() => {
+      splash.classList.add('hidden');
+    }, 1700);
+
+    function setTelemetry(text, isError = false) {
+      telemetryBar.style.color = isError ? '#f43f5e' : '#00f0ff';
+      telemetryBar.textContent = `SYS // ${text}`;
+    }
+
+    function formatTime(ms) {
+      const d = new Date(ms || Date.now());
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function appendChatBubble(packet, isOutgoing) {
+      const bubble = document.createElement('div');
+      bubble.className = `msg-bubble ${isOutgoing ? 'msg-out' : 'msg-in'}`;
+
+      const body = document.createElement('div');
+      body.textContent = packet.text;
+
+      const meta = document.createElement('div');
+      meta.className = 'msg-meta';
+      meta.innerHTML = `<span>${isOutgoing ? 'YOU' : (packet.sender || 'PEER')}</span><span>${formatTime(packet.timestamp)}</span>`;
+
+      bubble.appendChild(body);
+      bubble.appendChild(meta);
+      messagesContainer.appendChild(bubble);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function renderPeers(peers) {
+      peersContainer.innerHTML = '';
+      if (!peers || peers.length === 0) {
+        peersContainer.innerHTML = `
+          <div class="peer-item">
+            <div class="peer-meta">
+              <div class="peer-name">Scanning nearby frequencies...</div>
+              <div class="peer-mac">Ensure both phones have tapped SCAN NODES</div>
+            </div>
+          </div>`;
+        return;
+      }
+
+      peers.forEach(p => {
+        const row = document.createElement('div');
+        row.className = 'peer-item';
+
+        const meta = document.createElement('div');
+        meta.className = 'peer-meta';
+        meta.innerHTML = `
+          <div class="peer-name">${p.name}</div>
+          <div class="peer-mac">${p.address} • ${p.status}</div>
+        `;
+
+        const btn = document.createElement('button');
+        btn.className = 'btn-neon';
+        btn.textContent = p.status === 'INVITED' ? 'INVITED...' : 'LINK';
+        btn.onclick = () => {
+          setTelemetry(`Requesting P2P handshake with ${p.name}...`);
+          if (window.AndroidBridge) {
+            window.AndroidBridge.connectToPeer(p.address, p.name);
+          }
+        };
+
+        row.appendChild(meta);
+        row.appendChild(btn);
+        peersContainer.appendChild(row);
+      });
+    }
+
+    // Native -> JS Event Router
+    window.onNativeEvent = function(event, data) {
+      switch (event) {
+        case 'onSystemLog':
+          setTelemetry(data.msg, false);
+          break;
+        case 'onError':
+          setTelemetry(data.msg, true);
+          break;
+        case 'onSelfDevice':
+          selfNodeLabel.textContent = `LOCAL NODE: ${data.name}`;
+          break;
+        case 'onPeersUpdated':
+          renderPeers(data.peers);
+          break;
+        case 'onPeerIdentified':
+          peerTitle.textContent = data.peerName;
+          break;
+        case 'onConnectionChanged':
+          if (data.connected) {
+            connBadge.classList.add('online');
+            connText.textContent = 'LINKED';
+            peerTitle.textContent = data.peerName || 'REMOTE NODE';
+            roleLabel.textContent = `[${data.role}]`;
+            discoveryView.style.display = 'none';
+            chatView.style.display = 'flex';
+            setTelemetry(`Direct TCP socket established (${data.ip})`);
+          } else {
+            connBadge.classList.remove('online');
+            connText.textContent = 'STANDBY';
+            chatView.style.display = 'none';
+            discoveryView.style.display = 'flex';
+            setTelemetry('Link disconnected. Ready to scan.');
+          }
+          break;
+        case 'onMessageSent':
+          appendChatBubble(data, true);
+          break;
+        case 'onMessageReceived':
+          appendChatBubble(data, false);
+          break;
+      }
+    };
+
+    scanBtn.addEventListener('click', () => {
+      if (window.AndroidBridge) {
+        window.AndroidBridge.startDiscovery();
+      }
+    });
+
+    function transmitMessage() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+      if (window.AndroidBridge) {
+        window.AndroidBridge.sendMessage(text);
+      }
+      msgInput.value = '';
+    }
+
+    sendBtn.addEventListener('click', transmitMessage);
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') transmitMessage();
+    });
+
+    disconnectBtn.addEventListener('click', () => {
+      if (window.AndroidBridge) {
+        window.AndroidBridge.disconnectPeer();
+      }
+    });
+  </script>
+</body>
+</html>
